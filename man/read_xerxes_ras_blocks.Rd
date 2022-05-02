@@ -4,12 +4,12 @@
 \alias{read_xerxes_ras_blocks}
 \title{read_xerxes_ras_blocks}
 \usage{
-read_xerxes_ras_blocks(fn, stip_selection_language = F)
+read_xerxes_ras_blocks(fn, strip_selection_language = F)
 }
 \arguments{
 \item{fn}{path. The path to the input blockTableFile.}
 
-\item{stip_selection_language}{logical. Should trident selection language marks be stripped from Lefts and Rights?
+\item{strip_selection_language}{logical. Should trident selection language marks be stripped from Lefts and Rights?
 If true, selection marks such as "<" and ">" will be stripped from the Left and Right columns.}
 }
 \value{
