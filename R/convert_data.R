@@ -24,7 +24,6 @@ ras_to_rasta <- function(block_table, A, B, C) {
   raw_ras <- block_table %>%
     dplyr::mutate(RAS=.data$RAS*.data$Norm) %>%
     dplyr::select(.data$Left, .data$Right, .data$BlockNr, .data$RAS, .data$Norm)
-    tidyr::pivot_wider(names_from=.data$Right, values_from=.data$RAS)
 
   tidyr::crossing(A,B,C) %>% purrr::pmap_dfr(., ~calculate_rasta(raw_ras, A=..1, B=..2, C=..3))
 }
@@ -52,7 +51,7 @@ calculate_rasta <- function(raw_ras, A, B, C) {
     dplyr::mutate(rasta=.data$RAS.x - .data$RAS.y, D="Ref") %>%
     dplyr::select(.data$A, .data$B, .data$C, .data$D, .data$BlockNr, .data$Norm, .data$rasta)
 
-  result <- delete_mj_jackknife(rasta_table, rasta, Norm, Norm) %>% tibble::as.tibble() %>%
+  result <- delete_mj_jackknife(rasta_table, rasta, Norm, Norm) %>% tibble::as_tibble() %>%
     dplyr::mutate(A=A, B=B, C=C, D="Ref") %>%
     dplyr::select(.data$A, .data$B, .data$C, .data$D, .data$theta_J, .data$jack_se, .data$Zscore)
 

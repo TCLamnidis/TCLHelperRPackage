@@ -41,10 +41,16 @@ delete_mj_jackknife <- function(data, values, mj, weights, .print_vals=F) {
   )
   ## Use added columns to calculate theta_J
   theta_J <- data %>%
-    dplyr::summarise(theta_J=nrow(data) * sums$theta_hat - sum(.data$n_minus_weight*.data$theta_minus/sums$weight_sum)) %>%
+    dplyr::summarise(
+      theta_J=nrow(data) * sums$theta_hat - sum(.data$n_minus_weight*.data$theta_minus/sums$weight_sum)
+      ) %>%
     dplyr::pull(.data$theta_J)
-  variance <- data %>%  dplyr::summarise(variance=1/nrow(data) * sum((.data$tau-.data$theta_J)^2/(.data$hj-1))) %>% dplyr::pull(.data$variance)
-  jack_se = sqrt(.data$variance)
+  variance <- data %>%
+    dplyr::summarise(
+      variance=1/nrow(data) * sum((.data$tau-theta_J)^2/(.data$hj-1))
+      ) %>%
+    dplyr::pull(.data$variance)
+  jack_se = sqrt(variance)
   if (.print_vals) {
     return(
       list(
