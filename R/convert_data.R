@@ -1,4 +1,4 @@
-if (getRversion() >= "2.15.1") utils::globalVariables(c(".", "Norm","rasta")) ## Disables notes about '.' due to magrittr
+if (getRversion() >= "2.15.1") utils::globalVariables(c(".", "Norm", "rasta")) ## Disables notes about '.' due to magrittr
 
 #' A function to calculate RASTA(A, B; C, Ref) from a blockTable of RAS per chromosome.
 #'
@@ -22,10 +22,10 @@ ras_to_rasta <- function(block_table, A, B, C) {
 
   ## Convert ras to raw ras
   raw_ras <- block_table %>%
-    dplyr::mutate(RAS=.data$RAS*.data$Norm) %>%
+    dplyr::mutate(RAS = .data$RAS * .data$Norm) %>%
     dplyr::select(.data$Left, .data$Right, .data$BlockNr, .data$RAS, .data$Norm)
 
-  tidyr::crossing(A,B,C) %>% purrr::pmap_dfr(., ~calculate_rasta(raw_ras, A=..1, B=..2, C=..3))
+  tidyr::crossing(A, B, C) %>% purrr::pmap_dfr(., ~ calculate_rasta(raw_ras, A = ..1, B = ..2, C = ..3))
 }
 
 
@@ -39,20 +39,20 @@ ras_to_rasta <- function(block_table, A, B, C) {
 #' @return A tibble with the requested RASTA, it's error and ZScore
 #' @export
 calculate_rasta <- function(raw_ras, A, B, C) {
-
   ras_A_C <- raw_ras %>%
     dplyr::filter(.data$Left == A, .data$Right == C)
 
   ras_B_C <- raw_ras %>%
     dplyr::filter(.data$Left == B, .data$Right == C)
 
-  rasta_table <- dplyr::full_join(ras_A_C, ras_B_C, by=c("Right", "BlockNr","Norm")) %>%
-    dplyr::rename(A=.data$Left.x, B=.data$Left.y, C=.data$Right) %>%
-    dplyr::mutate(rasta=.data$RAS.x - .data$RAS.y, D="Ref") %>%
+  rasta_table <- dplyr::full_join(ras_A_C, ras_B_C, by = c("Right", "BlockNr", "Norm")) %>%
+    dplyr::rename(A = .data$Left.x, B = .data$Left.y, C = .data$Right) %>%
+    dplyr::mutate(rasta = .data$RAS.x - .data$RAS.y, D = "Ref") %>%
     dplyr::select(.data$A, .data$B, .data$C, .data$D, .data$BlockNr, .data$Norm, .data$rasta)
 
-  result <- delete_mj_jackknife(rasta_table, rasta, Norm, Norm) %>% tibble::as_tibble() %>%
-    dplyr::mutate(A=A, B=B, C=C, D="Ref") %>%
+  result <- delete_mj_jackknife(rasta_table, rasta, Norm, Norm) %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(A = A, B = B, C = C, D = "Ref") %>%
     dplyr::select(.data$A, .data$B, .data$C, .data$D, .data$theta_J, .data$jack_se, .data$Zscore)
 
   return(result)
@@ -70,7 +70,7 @@ check_x_in_y <- function(x, y, var_name) {
   assertthat::assert_that(length(x) != 0, msg = paste0("[ras_to_rasta]: '", var_name, "' cannot be empty."))
 
   assertthat::assert_that(
-    setequal(x, intersect(x, y))
-    , msg = paste0("[ras_to_rasta]: ID(s) '", paste0(setdiff(x, y), collapse="', "), "' not found in input table. Halting execution.")
+    setequal(x, intersect(x, y)),
+    msg = paste0("[ras_to_rasta]: ID(s) '", paste0(setdiff(x, y), collapse = "', "), "' not found in input table. Halting execution.")
   )
 }
