@@ -1,3 +1,14 @@
+#' read_xerxes_ras_blocks
+#'
+#' @param fn path. The path to the input blockTableFile.
+#' @param stip_selection_language logical. Should trident selection language marks be stripped from Lefts and Rights?
+#' If true, selection marks such as "<" and ">" will be stripped from the Left and Right columns.
+#'
+#' @return A tibble containing the contents of the blockTableFile
+#' @export
+#'
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
 read_xerxes_ras_blocks <- function(fn, stip_selection_language = F) {
   if (!file.exists(fn)) {
     stop(paste0(
@@ -9,8 +20,8 @@ read_xerxes_ras_blocks <- function(fn, stip_selection_language = F) {
 
   if (stip_selection_language) {
     block_table <- block_table %>%
-      mutate(across(
-        .cols=c(Left, Right),
+      dplyr::mutate(dplyr::across(
+        .cols=c(.data$Left, .data$Right),
         .fns= ~stringr::str_replace_all(., "([<>])", "") ## Remove individual selection markers
       ))
   }
