@@ -76,7 +76,8 @@ read_xerxes_f3_table <- function(fn, strip_selection_language = F) {
     ))
   }
   ## Skip header and add own column names because of https://github.com/poseidon-framework/poseidon-analysis-hs/issues/3
-  f3_table <- readr::read_tsv(fn, col_types = "cccccddd", skip=1, col_names=c("Statistic", "a", "b", "c", "Estimate","StdErr","Z score"))
+  f3_table <- data.table::fread(fn, sep="\t", header=T, fill=T) %>%
+    homogenise_xerxes_output()
 
   if (strip_selection_language) {
     f3_table <- f3_table %>%
@@ -87,4 +88,33 @@ read_xerxes_f3_table <- function(fn, strip_selection_language = F) {
   }
   return(f3_table)
 
+}
+
+homogenise_xerxes_output <- function(input_f3_table) {
+    f3_table <- input_f3_table %>%
+      dplyr::mutate(n_na=rowSums(is.na(.)))
+    f2_table <- f3_table %>%
+      dplyr::filter(n_na == 2) %>%
+      dplyr::mutate(
+        `Z score` = .data$Estimate,
+        StdErr = as.double(.data$d),
+        Estimate = as.double(.data$c),
+        d = NA_character_,
+        c = .data$b,
+        b = .data$a
+        )
+    f3_table <- f3_table %>%
+      dplyr::filter(n_na == 1) %>%
+      dplyr::mutate(
+        `Z score` = .data$StdErr,
+        StdErr = .data$Estimate,
+        Estimate = as.double(.data$d),
+        d = NA_character_
+      )
+
+    homogenised_table <- dplyr::bind_rows(f2_table, f3_table) %>%
+      dplyr::select(-n_na) %>%
+      tibble::as_tibble()
+
+    return(homogenised_table)
 }
