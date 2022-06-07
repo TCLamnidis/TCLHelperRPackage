@@ -71,3 +71,51 @@ delete_mj_jackknife <- function(data, values, mj, weights, .print_vals = F) {
     )
   }
 }
+
+#' K Nearest Neighbour Classification
+#'
+#' Preform k-nearest-neighbour classification from a similarity matrix and a list classifying the columns into groups.
+#'
+#' @param x matrix. The input similarity matrix.
+#' @param group_definitions tibble. A tibble with two columns that specifies the name of each column in the input matrix and the grouping it belongs to.
+#' @param k integer. The number of nearest neighbours to use for classification.
+#' @param exclude_self_sharing logical. Should self sharing be excluded? If so, the highest sharing in each row is ignored (assumed to be self-sharing).
+#'
+#' @return Tibble. A tibble containing the assigned group of the k nearest neighbours as well as the accuracy of the knn at assigning the correct
+#' grouping based on the similarity scores for each row in the input matrix.
+#' @export
+#'
+k_nearest_neighbour <- function(x, group_definitions, k=5, exclude_self_sharing=T) {
+
+  pull_group <- function(id, group_definitions) {
+    group_definitions[group_definitions[,1] %>% dplyr::pull() %in% id, ][,2] %>%
+      dplyr::pull()
+  }
+
+  min_idx <- if ( exclude_self_sharing ) {2} else {1}
+  max_idx <- if ( exclude_self_sharing ) {k+1} else {k}
+
+
+  n <- nrow(x)
+  rnames <- rownames(x)
+  ungrouped_mat <- matrix(0, ncol = k, nrow = n)
+  grouped_mat <- matrix(NA_character_, ncol = k, nrow = n)
+  accuracy <- c()
+  rownames(ungrouped_mat) <- rnames
+  rownames(grouped_mat) <- rnames
+  for (i in 1:n) {
+    ungrouped_mat[i,] = colnames(x)[order(x[i,], decreasing = T)[min_idx:max_idx]]
+    grouped_mat[i,] = ungrouped_mat[i,1:5] %>% pull_group(., group_definitions)
+    accuracy <- c(
+      accuracy,
+      grouped_mat[i,] %>%
+        forcats::fct_count() %>%
+        dplyr::filter(.data$f == pull_group(rownames(grouped_mat)[i], group_definitions)) %>%
+        dplyr::pull(n) / k
+      )
+  }
+  knn <- tibble::as_tibble(grouped_mat, rownames="Id", .name_repair = "unique") %>%
+    dplyr::bind_cols(accuracy %>% tibble::as_tibble_col(column_name="accuracy"), .name_repair='minimal')
+
+  return(knn)
+}
