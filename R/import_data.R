@@ -145,6 +145,8 @@ homogenise_xerxes_fstats_output <- function(input_f3_table, old_xerxes) {
           c = .data$b,
           b = .data$a
         )
+      f3_table <- f3_table %>%
+        dplyr::filter(! .data$n_na == 2)
 
       homogenised_table <- dplyr::bind_rows(f2_table, f3_table) %>%
         dplyr::select(-.data$n_na) %>%
