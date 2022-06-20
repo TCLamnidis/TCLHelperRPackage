@@ -58,26 +58,37 @@ read_xerxes_ras_table <- function(fn, strip_selection_language = F) {
   return(ras_table)
 }
 
-#' read_xerxes_f3_table
+#' read_xerxes_fstats_table
+#'
+#' Read xerxes tableOutFile into a tibble. F2 statistics are converted to F3 statistics to simplify the creation of a similarity matrix.
 #'
 #' @param fn path. The path to the input tableOutFile.
 #' @param strip_selection_language logical. Should trident selection language marks be stripped from columns a,b and c?
 #' If true, selection marks such as "<" and ">" will be stripped from the a, b and c columns.
+#' @param old_xerxes logical. Older versions of xerxes did not correctly match the columns for F3/F2 to the header (which is set up for F4).
+#' Should be set to FALSE for tables produced with xerxes version higher than v0.1.3.1.
 #'
 #' @return A tibble containing the contents of the tableOutFile.
 #' @export
 #'
 #' @importFrom magrittr %>%
 #' @importFrom rlang .data
-read_xerxes_f3_table <- function(fn, strip_selection_language = F) {
+read_xerxes_fstats_table <- function(fn, strip_selection_language = F, old_xerxes=F) {
   if (!file.exists(fn)) {
     stop(paste0(
       "[read_xerxes_f3_table] File '", fn, "' not found. Please provide the path to a valid xerxes f3 tableOutFile"
     ))
   }
-  ## Skip header and add own column names because of https://github.com/poseidon-framework/poseidon-analysis-hs/issues/3
-  f3_table <- data.table::fread(fn, sep="\t", header=T, fill=T) %>%
-    homogenise_xerxes_output()
+
+  if (old_xerxes) {
+    ## Skip header and add own column names because of https://github.com/poseidon-framework/poseidon-analysis-hs/issues/3
+    f3_table <- data.table::fread(fn, sep="\t", header=T, fill=T) %>%
+      homogenise_xerxes_fstats_output(., old_xerxes)
+  } else {
+    f3_table <- data.table::fread(fn, sep="\t", header=T, fill=T) %>%
+      dplyr::mutate(c=dplyr::na_if(.data$c, '')) %>%
+      homogenise_xerxes_fstats_output(., old_xerxes)
+  }
 
   if (strip_selection_language) {
     f3_table <- f3_table %>%
@@ -90,31 +101,55 @@ read_xerxes_f3_table <- function(fn, strip_selection_language = F) {
 
 }
 
-homogenise_xerxes_output <- function(input_f3_table) {
+homogenise_xerxes_fstats_output <- function(input_f3_table, old_xerxes) {
     f3_table <- input_f3_table %>%
       dplyr::mutate(n_na=rowSums(is.na(.)))
-    f2_table <- f3_table %>%
-      dplyr::filter(n_na == 2) %>%
-      dplyr::mutate(
-        `Z score` = .data$Estimate,
-        StdErr = as.double(.data$d),
-        Estimate = as.double(.data$c),
-        d = NA_character_,
-        c = .data$b,
-        b = .data$a
+    if (old_xerxes) {
+      f2_table <- f3_table %>%
+        dplyr::filter(.data$n_na == 2) %>%
+        dplyr::mutate(
+          `Z score` = .data$Estimate,
+          StdErr = as.double(.data$d),
+          Estimate = as.double(.data$c),
+          d = NA_character_,
+          c = .data$b,
+          b = .data$a
+          )
+      f4_table <- f3_table %>%
+        dplyr::filter(.data$n_na == 0) %>%
+        dplyr::mutate(
+          dplyr::across(
+            .cols=c("Statistic", "a", "b", "c", "d"), .fn=~as.character()
+          ),
+          dplyr::across(
+            .col=c("Estimate", "StdErr", "Z score"), .fn=~as.numeric()
+          )
         )
-    f3_table <- f3_table %>%
-      dplyr::filter(n_na == 1) %>%
-      dplyr::mutate(
-        `Z score` = .data$StdErr,
-        StdErr = .data$Estimate,
-        Estimate = as.double(.data$d),
-        d = NA_character_
-      )
+      f3_table <- f3_table %>%
+        dplyr::filter(.data$n_na == 1) %>%
+        dplyr::mutate(
+          `Z score` = .data$StdErr,
+          StdErr = .data$Estimate,
+          Estimate = as.double(.data$d),
+          d = NA_character_
+        )
+      homogenised_table <- dplyr::bind_rows(f2_table, f3_table, f4_table) %>%
+        dplyr::select(-.data$n_na) %>%
+        tibble::as_tibble()
+    } else {
+      ## With newer versions of xerxes only f2 needs to be adjusted to F3. F3 results are read correctly.
+      f2_table <- f3_table %>%
+        dplyr::filter(.data$n_na == 2) %>%
+        dplyr::mutate(
+          d = NA_character_,
+          c = .data$b,
+          b = .data$a
+        )
 
-    homogenised_table <- dplyr::bind_rows(f2_table, f3_table) %>%
-      dplyr::select(-n_na) %>%
-      tibble::as_tibble()
+      homogenised_table <- dplyr::bind_rows(f2_table, f3_table) %>%
+        dplyr::select(-.data$n_na) %>%
+        tibble::as_tibble()
+    }
 
     return(homogenised_table)
 }
