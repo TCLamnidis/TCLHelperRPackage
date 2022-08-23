@@ -9,8 +9,8 @@ read_xerxes_fstats_table(fn, strip_selection_language = F, old_xerxes = F)
 \arguments{
 \item{fn}{path. The path to the input tableOutFile.}
 
-\item{strip_selection_language}{logical. Should trident selection language marks be stripped from columns a,b and c?
-If true, selection marks such as "<" and ">" will be stripped from the a, b and c columns.}
+\item{strip_selection_language}{logical. Should trident selection language marks be stripped from Lefts and Rights?
+If true, selection marks such as "<" and ">" will be stripped from the Left and Right columns.}
 
 \item{old_xerxes}{logical. Older versions of xerxes did not correctly match the columns for F3/F2 to the header (which is set up for F4).
 Should be set to FALSE for tables produced with xerxes version higher than v0.1.3.1.}

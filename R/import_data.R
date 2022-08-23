@@ -31,9 +31,7 @@ read_xerxes_ras_blocks <- function(fn, strip_selection_language = F) {
 #' read_xerxes_ras_table
 #'
 #' @param fn path. The path to the input tableOutFile.
-#' @param strip_selection_language logical. Should trident selection language marks be stripped from Lefts and Rights?
-#' If true, selection marks such as "<" and ">" will be stripped from the Left and Right columns.
-#'
+#' @inheritParams read_xerxes_ras_blocks
 #' @return A tibble containing the contents of the tableOutFile.
 #' @export
 #'
@@ -63,8 +61,7 @@ read_xerxes_ras_table <- function(fn, strip_selection_language = F) {
 #' Read xerxes tableOutFile into a tibble. F2 statistics are converted to F3 statistics to simplify the creation of a similarity matrix.
 #'
 #' @param fn path. The path to the input tableOutFile.
-#' @param strip_selection_language logical. Should trident selection language marks be stripped from columns a,b and c?
-#' If true, selection marks such as "<" and ">" will be stripped from the a, b and c columns.
+#' @inheritParams read_xerxes_ras_blocks
 #' @param old_xerxes logical. Older versions of xerxes did not correctly match the columns for F3/F2 to the header (which is set up for F4).
 #' Should be set to FALSE for tables produced with xerxes version higher than v0.1.3.1.
 #'
@@ -154,4 +151,31 @@ homogenise_xerxes_fstats_output <- function(input_f3_table, old_xerxes) {
     }
 
     return(homogenised_table)
+}
+
+#' read_xerxes_rasf4_table
+#'
+#' Read xerxes ras f4TableOutFile contents into a tibble.
+#'
+#' @param fn character. The path to the input f4TableOutFile.
+#' @inheritParams read_xerxes_ras_blocks
+#'
+#' @return A tibble containing the contents of the f4TableOutFile.
+#' @export
+#'
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
+#'
+read_xerxes_rasf4_table <- function(fn, strip_selection_language = F) {
+  rasf4_table <- readr::read_tsv(fn, col_types='cccddddd')
+
+  if ( strip_selection_language ) {
+    rasf4_table <- rasf4_table %>%
+      dplyr::mutate(dplyr::across(
+        .cols = c(.data$Left1, .data$Left2, .data$Right),
+        .fns = ~ stringr::str_replace_all(., "([<>])", "") ## Remove individual selection markers
+      ))
+  }
+
+  return(rasf4_table)
 }
